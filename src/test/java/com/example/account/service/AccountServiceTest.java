@@ -1,0 +1,98 @@
+package com.example.account.service;
+
+import com.example.account.domain.Account;
+import com.example.account.domain.AccountUser;
+import com.example.account.dto.account.AccountInfoDto;
+import com.example.account.dto.account.CreateAccountDto;
+import com.example.account.repository.AccountRepository;
+import com.example.account.repository.AccountUserRepository;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.BDDMockito.given;
+
+@ExtendWith(MockitoExtension.class)
+class AccountServiceTest {
+
+    @Mock
+    AccountRepository accountRepository;
+    @Mock
+    AccountUserRepository accountUserRepository;
+    @InjectMocks
+    AccountServiceImpl accountService;
+
+    @Test
+    void createAccount() {
+        AccountUser user = AccountUser.builder().id(10L).name("user").build();
+        Account account = Account.builder()
+                .accountUser(user)
+                .accountNumber("1000000000")
+                .build();
+        given(accountUserRepository.findById(anyLong())).willReturn(Optional.of(user));
+        given(accountRepository.findFirstByOrderByIdDesc()).willReturn(Optional.of(account));
+        given(accountRepository.save(any(Account.class))).willReturn(Account.builder()
+                .accountUser(user)
+                .accountNumber("1000000001")
+                .build()
+        );
+
+        CreateAccountDto.Request dto = new CreateAccountDto.Request();
+        dto.setUserId(10L);
+        dto.setInitBalance(1000L);
+        CreateAccountDto.Response responseDto = accountService.createAccount(dto);
+
+        assertEquals(10L, responseDto.getUserId());
+        assertEquals("1000000001", responseDto.getAccountNumber());
+
+    }
+
+    @Test
+    void deleteAccount() {
+    }
+
+    @Test
+    void getAccountsByUserId() {
+        AccountUser user = AccountUser.builder()
+                .id(10L)
+                .name("user")
+                .build();
+        List<Account> accounts = Arrays.asList(
+                Account.builder()
+                        .accountNumber("1000000000")
+                        .balance(1000L)
+                        .build(),
+                Account.builder()
+                        .accountNumber("1000000001")
+                        .balance(2000L)
+                        .build(),
+                Account.builder()
+                        .accountNumber("1000000002")
+                        .balance(3000L)
+                        .build()
+        );
+        given(accountUserRepository.findById(anyLong())).willReturn(Optional.of(user));
+        given(accountRepository.findByAccountUser(any(AccountUser.class)))
+                .willReturn(accounts);
+
+        List<AccountInfoDto> accountInfoDtos = accountService.getAccountsByUserId(10L);
+
+        assertEquals(3, accountInfoDtos.size());
+        assertEquals("1000000000", accountInfoDtos.get(0).getAccountNumber());
+        assertEquals(1000L, accountInfoDtos.get(0).getBalance());
+        assertEquals("1000000001", accountInfoDtos.get(1).getAccountNumber());
+        assertEquals(2000L, accountInfoDtos.get(1).getBalance());
+        assertEquals("1000000002", accountInfoDtos.get(2).getAccountNumber());
+        assertEquals(3000L, accountInfoDtos.get(2).getBalance());
+    }
+}

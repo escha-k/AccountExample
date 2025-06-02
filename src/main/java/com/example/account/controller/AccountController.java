@@ -16,13 +16,6 @@ public class AccountController {
 
     private final AccountService accountService;
 
-    @GetMapping("/account")
-    public List<AccountInfoDto> getAccount(@RequestParam("user_id") Long id) {
-        List<AccountInfoDto> responseDto = accountService.getAccountsByUserId(id);
-
-        return responseDto;
-    }
-
     @PostMapping("/account")
     public CreateAccountDto.Response createAccount(
             @RequestBody @Valid CreateAccountDto.Request dto
@@ -37,6 +30,13 @@ public class AccountController {
             @RequestBody @Valid DeleteAccountDto.Request dto
     ) {
         DeleteAccountDto.Response responseDto = accountService.deleteAccount(dto);
+
+        return responseDto;
+    }
+
+    @GetMapping("/account")
+    public List<AccountInfoDto> getAccount(@RequestParam("user_id") Long id) {
+        List<AccountInfoDto> responseDto = accountService.getAccountsByUserId(id);
 
         return responseDto;
     }

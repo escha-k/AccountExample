@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import static com.example.account.type.ErrorCode.*;
 
@@ -34,9 +33,7 @@ public class AccountServiceImpl implements AccountService {
         Long userId = dto.getUserId();
         Long initBalance = dto.getInitBalance();
 
-        AccountUser user = accountUserRepository.findById(userId)
-                .orElseThrow(() -> new AccountException(USER_NOT_FOUND));
-
+        AccountUser user = getAccountUser(userId);
         validateAccountQuantity(user);
 
         Account saved = accountRepository.save(Account.builder()
@@ -57,6 +54,11 @@ public class AccountServiceImpl implements AccountService {
         return responseDto;
     }
 
+    private AccountUser getAccountUser(Long userId) {
+        return accountUserRepository.findById(userId)
+                .orElseThrow(() -> new AccountException(USER_NOT_FOUND));
+    }
+
     private void validateAccountQuantity(AccountUser user) {
         // 사용자의 보유 계좌 수가 최대인 경우
         if (accountRepository.countByAccountUser(user) >= MAX_ACCOUNT_PER_USER) {
@@ -73,16 +75,8 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public Account getAccount(Long id) {
-        Optional<Account> account = accountRepository.findById(id);
-
-        return account.get();
-    }
-
-    @Override
     public List<AccountInfoDto> getAccountsByUserId(Long userId) {
-        AccountUser user = accountUserRepository.findById(userId)
-                .orElseThrow(() -> new AccountException(USER_NOT_FOUND));
+        AccountUser user = getAccountUser(userId);
 
         List<Account> accounts = accountRepository.findByAccountUser(user);
         List<AccountInfoDto> responseDtoList = accounts.stream()
@@ -100,11 +94,9 @@ public class AccountServiceImpl implements AccountService {
     public DeleteAccountDto.Response deleteAccount(DeleteAccountDto.Request requestDto) {
         Long userId = requestDto.getUserId();
         String accountNumber = requestDto.getAccountNumber();
-        AccountUser user = accountUserRepository.findById(userId)
-                .orElseThrow(() -> new AccountException(USER_NOT_FOUND));
-        Account deleteAccount = accountRepository.findByAccountNumber(accountNumber)
-                .orElseThrow(() -> new AccountException(ACCOUNT_NOT_FOUND));
 
+        AccountUser user = getAccountUser(userId);
+        Account deleteAccount = getAccount(accountNumber);
         validateDeleteAccount(user, deleteAccount);
 
         deleteAccount.setAccountStatus(AccountStatus.UNREGISTERED);
@@ -117,6 +109,12 @@ public class AccountServiceImpl implements AccountService {
                 .build();
 
         return responseDto;
+    }
+
+    private Account getAccount(String accountNumber) {
+        Account deleteAccount = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new AccountException(ACCOUNT_NOT_FOUND));
+        return deleteAccount;
     }
 
     private void validateDeleteAccount(AccountUser user, Account account) {

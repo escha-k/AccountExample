@@ -1,6 +1,5 @@
 package com.example.account.service;
 
-import com.example.account.domain.Account;
 import com.example.account.dto.account.AccountInfoDto;
 import com.example.account.dto.account.CreateAccountDto;
 import com.example.account.dto.account.DeleteAccountDto;
@@ -14,6 +13,4 @@ public interface AccountService {
     public DeleteAccountDto.Response deleteAccount(DeleteAccountDto.Request requestDto);
 
     public List<AccountInfoDto> getAccountsByUserId(Long userId);
-
-    public Account getAccount(Long id);
 }

@@ -38,11 +38,8 @@ public class TransactionServiceImpl implements TransactionService {
         String accountNumber = requestDto.getAccountNumber();
         Long amount = requestDto.getAmount();
 
-        AccountUser user = accountUserRepository.findById(userId)
-                .orElseThrow(() -> new AccountException(USER_NOT_FOUND));
-        Account account = accountRepository.findByAccountNumber(accountNumber)
-                .orElseThrow(() -> new AccountException(ACCOUNT_NOT_FOUND));
-
+        AccountUser user = getAccountUser(userId);
+        Account account = getAccount(accountNumber);
         validateUseTransaction(user, account, amount);
 
         account.useBalance(amount);
@@ -67,6 +64,18 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
 
         return responseDto;
+    }
+
+    private Account getAccount(String accountNumber) {
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new AccountException(ACCOUNT_NOT_FOUND));
+        return account;
+    }
+
+    private AccountUser getAccountUser(Long userId) {
+        AccountUser user = accountUserRepository.findById(userId)
+                .orElseThrow(() -> new AccountException(USER_NOT_FOUND));
+        return user;
     }
 
     private void validateUseTransaction(AccountUser user, Account account, Long amount) {
@@ -94,8 +103,7 @@ public class TransactionServiceImpl implements TransactionService {
         String accountNumber = requestDto.getAccountNumber();
         Long amount = requestDto.getAmount();
 
-        Account account = accountRepository.findByAccountNumber(accountNumber)
-                .orElseThrow(() -> new AccountException(ACCOUNT_NOT_FOUND));
+        Account account = getAccount(accountNumber);
 
         Transaction saved = transactionRepository.save(Transaction.builder()
                 .transactionType(TransactionType.USE)
@@ -115,10 +123,8 @@ public class TransactionServiceImpl implements TransactionService {
         String accountNumber = requestDto.getAccountNumber();
         Long amount = requestDto.getAmount();
 
-        Transaction transaction = transactionRepository.findByTransactionId(transactionId)
-                .orElseThrow(() -> new TransactionException(TRANSACTION_NOT_FOUND));
-        Account account = accountRepository.findByAccountNumber(accountNumber)
-                .orElseThrow(() -> new AccountException(ACCOUNT_NOT_FOUND));
+        Transaction transaction = getTransaction(transactionId);
+        Account account = getAccount(accountNumber);
 
         validateCancelTransaction(transaction, account, amount);
 
@@ -147,6 +153,12 @@ public class TransactionServiceImpl implements TransactionService {
 
     }
 
+    private Transaction getTransaction(String transactionId) {
+        Transaction transaction = transactionRepository.findByTransactionId(transactionId)
+                .orElseThrow(() -> new TransactionException(TRANSACTION_NOT_FOUND));
+        return transaction;
+    }
+
     private void validateCancelTransaction(Transaction transaction, Account account, Long amount) {
         // 거래와 계좌가 일치하지 않는 경우
         Long transactionAccountId = transaction.getAccount().getId();
@@ -167,8 +179,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public QueryTransactionDto findByTransactionId(String transactionId) {
-        Transaction transaction = transactionRepository.findByTransactionId(transactionId)
-                .orElseThrow(() -> new TransactionException(TRANSACTION_NOT_FOUND));
+        Transaction transaction = getTransaction(transactionId);
 
         QueryTransactionDto responseDto = QueryTransactionDto.builder()
                 .accountNumber(transaction.getAccount().getAccountNumber())

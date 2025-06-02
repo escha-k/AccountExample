@@ -33,9 +33,11 @@ public class AccountServiceImpl implements AccountService {
         Long userId = dto.getUserId();
         Long initBalance = dto.getInitBalance();
 
+        // 사용자 가져오기 및 검증
         AccountUser user = getAccountUser(userId);
         validateAccountQuantity(user);
 
+        // 계좌 생성 로직
         Account saved = accountRepository.save(Account.builder()
                 .accountUser(user)
                 .accountNumber(generateAccountNumber())
@@ -45,6 +47,7 @@ public class AccountServiceImpl implements AccountService {
                 .build()
         );
 
+        // 응답 생성 및 반환
         CreateAccountDto.Response responseDto = CreateAccountDto.Response.builder()
                 .userId(saved.getAccountUser().getId())
                 .accountNumber(saved.getAccountNumber())
@@ -54,30 +57,37 @@ public class AccountServiceImpl implements AccountService {
         return responseDto;
     }
 
-    private AccountUser getAccountUser(Long userId) {
-        return accountUserRepository.findById(userId)
-                .orElseThrow(() -> new AccountException(USER_NOT_FOUND));
-    }
+    @Override
+    @Transactional
+    public DeleteAccountDto.Response deleteAccount(DeleteAccountDto.Request requestDto) {
+        Long userId = requestDto.getUserId();
+        String accountNumber = requestDto.getAccountNumber();
 
-    private void validateAccountQuantity(AccountUser user) {
-        // 사용자의 보유 계좌 수가 최대인 경우
-        if (accountRepository.countByAccountUser(user) >= MAX_ACCOUNT_PER_USER) {
-            throw new AccountException(MAX_ACCOUNT_PER_USER_OVER);
-        }
-    }
+        // 사용자, 계좌 가져오기 및 검증
+        AccountUser user = getAccountUser(userId);
+        Account deleteAccount = getAccount(accountNumber);
+        validateDeleteAccount(user, deleteAccount);
 
-    private String generateAccountNumber() {
-        String newAccountNumber = accountRepository.findFirstByOrderByIdDesc()
-                .map(account -> Integer.toString(Integer.parseInt(account.getAccountNumber()) + 1))
-                .orElse("1000000000");
+        // 계좌 삭제 로직
+        deleteAccount.setAccountStatus(AccountStatus.UNREGISTERED);
+        deleteAccount.setUnRegisteredAt(LocalDateTime.now());
 
-        return newAccountNumber;
+        // 응답 생성 및 반환
+        DeleteAccountDto.Response responseDto = DeleteAccountDto.Response.builder()
+                .userId(deleteAccount.getAccountUser().getId())
+                .accountNumber(deleteAccount.getAccountNumber())
+                .unRegisteredAt(deleteAccount.getUnRegisteredAt())
+                .build();
+
+        return responseDto;
     }
 
     @Override
     public List<AccountInfoDto> getAccountsByUserId(Long userId) {
+        // 사용자 가져오기 및 검증
         AccountUser user = getAccountUser(userId);
 
+        // 응답 생성 및 반환
         List<Account> accounts = accountRepository.findByAccountUser(user);
         List<AccountInfoDto> responseDtoList = accounts.stream()
                 .filter(account -> account.getAccountStatus() == AccountStatus.IN_USE)
@@ -89,32 +99,22 @@ public class AccountServiceImpl implements AccountService {
         return responseDtoList;
     }
 
-    @Override
-    @Transactional
-    public DeleteAccountDto.Response deleteAccount(DeleteAccountDto.Request requestDto) {
-        Long userId = requestDto.getUserId();
-        String accountNumber = requestDto.getAccountNumber();
-
-        AccountUser user = getAccountUser(userId);
-        Account deleteAccount = getAccount(accountNumber);
-        validateDeleteAccount(user, deleteAccount);
-
-        deleteAccount.setAccountStatus(AccountStatus.UNREGISTERED);
-        deleteAccount.setUnRegisteredAt(LocalDateTime.now());
-
-        DeleteAccountDto.Response responseDto = DeleteAccountDto.Response.builder()
-                .userId(deleteAccount.getAccountUser().getId())
-                .accountNumber(deleteAccount.getAccountNumber())
-                .unRegisteredAt(deleteAccount.getUnRegisteredAt())
-                .build();
-
-        return responseDto;
+    private AccountUser getAccountUser(Long userId) {
+        return accountUserRepository.findById(userId)
+                .orElseThrow(() -> new AccountException(USER_NOT_FOUND));
     }
 
     private Account getAccount(String accountNumber) {
         Account deleteAccount = accountRepository.findByAccountNumber(accountNumber)
                 .orElseThrow(() -> new AccountException(ACCOUNT_NOT_FOUND));
         return deleteAccount;
+    }
+
+    private void validateAccountQuantity(AccountUser user) {
+        // 사용자의 보유 계좌 수가 최대인 경우
+        if (accountRepository.countByAccountUser(user) >= MAX_ACCOUNT_PER_USER) {
+            throw new AccountException(MAX_ACCOUNT_PER_USER_OVER);
+        }
     }
 
     private void validateDeleteAccount(AccountUser user, Account account) {
@@ -134,5 +134,13 @@ public class AccountServiceImpl implements AccountService {
         if (account.getBalance() > 0) {
             throw new AccountException(ACCOUNT_BALANCE_REMAINS);
         }
+    }
+
+    private String generateAccountNumber() {
+        String newAccountNumber = accountRepository.findFirstByOrderByIdDesc()
+                .map(account -> Integer.toString(Integer.parseInt(account.getAccountNumber()) + 1))
+                .orElse("1000000000");
+
+        return newAccountNumber;
     }
 }

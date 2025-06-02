@@ -38,23 +38,16 @@ public class TransactionServiceImpl implements TransactionService {
         String accountNumber = requestDto.getAccountNumber();
         Long amount = requestDto.getAmount();
 
+        // 사용자, 계좌 불러오기 및 검증
         AccountUser user = getAccountUser(userId);
         Account account = getAccount(accountNumber);
         validateUseTransaction(user, account, amount);
 
+        // 결제 로직
         account.useBalance(amount);
+        Transaction saved = saveTransaction(TransactionType.USE, TransactionResultType.S, account, amount);
 
-        Transaction saved = transactionRepository.save(Transaction.builder()
-                .transactionType(TransactionType.USE)
-                .transactionResultType(TransactionResultType.S)
-                .account(account)
-                .amount(amount)
-                .balanceSnapshot(account.getBalance())
-                .transactionId(UUID.randomUUID().toString())
-                .transactedAt(LocalDateTime.now())
-                .build()
-        );
-
+        // 응답 생성 및 반환
         UseTransactionDto.Response responseDto = UseTransactionDto.Response.builder()
                 .accountNumber(saved.getAccount().getAccountNumber())
                 .transactionResult(saved.getTransactionResultType())
@@ -64,6 +57,76 @@ public class TransactionServiceImpl implements TransactionService {
                 .build();
 
         return responseDto;
+    }
+
+    @Override
+    public CancelTransactionDto.Response cancelTransaction(CancelTransactionDto.Request requestDto) {
+        String transactionId = requestDto.getTransactionId();
+        String accountNumber = requestDto.getAccountNumber();
+        Long amount = requestDto.getAmount();
+
+        // 트랜잭션 불러오기 및 검증
+        Transaction transaction = getTransactionByTransactionId(transactionId);
+        Account account = getAccount(accountNumber);
+        validateCancelTransaction(transaction, account, amount);
+
+        // 결제 취소 로직
+        account.cancelBalance(transaction.getAmount());
+        Transaction saved = saveTransaction(TransactionType.CANCEL, TransactionResultType.S, account, amount);
+
+        // 응답 생성 및 반환
+        CancelTransactionDto.Response responseDto = CancelTransactionDto.Response.builder()
+                .accountNumber(saved.getAccount().getAccountNumber())
+                .transactionResult(saved.getTransactionResultType())
+                .transactionId(saved.getTransactionId())
+                .amount(saved.getAmount())
+                .transactedAt(saved.getTransactedAt())
+                .build();
+
+        return responseDto;
+
+    }
+
+    @Override
+    public QueryTransactionDto findByTransactionId(String transactionId) {
+        // 트랜잭션 불러오기 및 검증
+        Transaction transaction = getTransactionByTransactionId(transactionId);
+
+        // 응답 생성 및 반환
+        QueryTransactionDto responseDto = QueryTransactionDto.builder()
+                .accountNumber(transaction.getAccount().getAccountNumber())
+                .transactionType(transaction.getTransactionType())
+                .transactionResult(transaction.getTransactionResultType())
+                .transactionId(transaction.getTransactionId())
+                .amount(transaction.getAmount())
+                .transactedAt(transaction.getTransactedAt())
+                .build();
+
+        return responseDto;
+    }
+
+    @Override
+    public void saveFailedTransaction(UseTransactionDto.Request requestDto) {
+        String accountNumber = requestDto.getAccountNumber();
+        Long amount = requestDto.getAmount();
+
+        Account account = getAccount(accountNumber);
+
+        saveTransaction(TransactionType.USE, TransactionResultType.F, account, amount);
+    }
+
+    private Transaction saveTransaction(TransactionType type, TransactionResultType result, Account account, Long amount) {
+        Transaction saved = transactionRepository.save(Transaction.builder()
+                .transactionType(type)
+                .transactionResultType(result)
+                .account(account)
+                .amount(amount)
+                .balanceSnapshot(account.getBalance())
+                .transactionId(UUID.randomUUID().toString())
+                .transactedAt(LocalDateTime.now())
+                .build()
+        );
+        return saved;
     }
 
     private Account getAccount(String accountNumber) {
@@ -76,6 +139,12 @@ public class TransactionServiceImpl implements TransactionService {
         AccountUser user = accountUserRepository.findById(userId)
                 .orElseThrow(() -> new AccountException(USER_NOT_FOUND));
         return user;
+    }
+
+    private Transaction getTransactionByTransactionId(String transactionId) {
+        Transaction transaction = transactionRepository.findByTransactionId(transactionId)
+                .orElseThrow(() -> new TransactionException(TRANSACTION_NOT_FOUND));
+        return transaction;
     }
 
     private void validateUseTransaction(AccountUser user, Account account, Long amount) {
@@ -98,67 +167,6 @@ public class TransactionServiceImpl implements TransactionService {
         }
     }
 
-    @Override
-    public void saveFailedTransaction(UseTransactionDto.Request requestDto) {
-        String accountNumber = requestDto.getAccountNumber();
-        Long amount = requestDto.getAmount();
-
-        Account account = getAccount(accountNumber);
-
-        Transaction saved = transactionRepository.save(Transaction.builder()
-                .transactionType(TransactionType.USE)
-                .transactionResultType(TransactionResultType.F)
-                .account(account)
-                .amount(amount)
-                .balanceSnapshot(account.getBalance())
-                .transactionId(UUID.randomUUID().toString())
-                .transactedAt(LocalDateTime.now())
-                .build()
-        );
-    }
-
-    @Override
-    public CancelTransactionDto.Response cancelTransaction(CancelTransactionDto.Request requestDto) {
-        String transactionId = requestDto.getTransactionId();
-        String accountNumber = requestDto.getAccountNumber();
-        Long amount = requestDto.getAmount();
-
-        Transaction transaction = getTransaction(transactionId);
-        Account account = getAccount(accountNumber);
-
-        validateCancelTransaction(transaction, account, amount);
-
-        account.cancelBalance(transaction.getAmount());
-
-        Transaction saved = transactionRepository.save(Transaction.builder()
-                .transactionType(TransactionType.CANCEL)
-                .transactionResultType(TransactionResultType.S)
-                .account(account)
-                .amount(amount)
-                .balanceSnapshot(account.getBalance())
-                .transactionId(UUID.randomUUID().toString())
-                .transactedAt(LocalDateTime.now())
-                .build()
-        );
-
-        CancelTransactionDto.Response responseDto = CancelTransactionDto.Response.builder()
-                .accountNumber(saved.getAccount().getAccountNumber())
-                .transactionResult(saved.getTransactionResultType())
-                .transactionId(saved.getTransactionId())
-                .amount(saved.getAmount())
-                .transactedAt(saved.getTransactedAt())
-                .build();
-
-        return responseDto;
-
-    }
-
-    private Transaction getTransaction(String transactionId) {
-        Transaction transaction = transactionRepository.findByTransactionId(transactionId)
-                .orElseThrow(() -> new TransactionException(TRANSACTION_NOT_FOUND));
-        return transaction;
-    }
-
     private void validateCancelTransaction(Transaction transaction, Account account, Long amount) {
         // 거래와 계좌가 일치하지 않는 경우
         Long transactionAccountId = transaction.getAccount().getId();
@@ -175,21 +183,5 @@ public class TransactionServiceImpl implements TransactionService {
         if (transaction.getTransactedAt().isBefore(LocalDateTime.now().minusYears(1))) {
             throw new TransactionException(TRANSACTION_TOO_OLD_TO_CANCEL);
         }
-    }
-
-    @Override
-    public QueryTransactionDto findByTransactionId(String transactionId) {
-        Transaction transaction = getTransaction(transactionId);
-
-        QueryTransactionDto responseDto = QueryTransactionDto.builder()
-                .accountNumber(transaction.getAccount().getAccountNumber())
-                .transactionType(transaction.getTransactionType())
-                .transactionResult(transaction.getTransactionResultType())
-                .transactionId(transaction.getTransactionId())
-                .amount(transaction.getAmount())
-                .transactedAt(transaction.getTransactedAt())
-                .build();
-
-        return responseDto;
     }
 }

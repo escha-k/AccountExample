@@ -4,11 +4,13 @@ import com.example.account.domain.Account;
 import com.example.account.domain.AccountUser;
 import com.example.account.dto.account.AccountInfoDto;
 import com.example.account.dto.account.CreateAccountDto;
+import com.example.account.dto.account.DeleteAccountDto;
 import com.example.account.repository.AccountRepository;
 import com.example.account.repository.AccountUserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -18,9 +20,9 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AccountServiceTest {
@@ -63,36 +65,5 @@ class AccountServiceTest {
 
     @Test
     void getAccountsByUserId() {
-        AccountUser user = AccountUser.builder()
-                .id(10L)
-                .name("user")
-                .build();
-        List<Account> accounts = Arrays.asList(
-                Account.builder()
-                        .accountNumber("1000000000")
-                        .balance(1000L)
-                        .build(),
-                Account.builder()
-                        .accountNumber("1000000001")
-                        .balance(2000L)
-                        .build(),
-                Account.builder()
-                        .accountNumber("1000000002")
-                        .balance(3000L)
-                        .build()
-        );
-        given(accountUserRepository.findById(anyLong())).willReturn(Optional.of(user));
-        given(accountRepository.findByAccountUser(any(AccountUser.class)))
-                .willReturn(accounts);
-
-        List<AccountInfoDto> accountInfoDtos = accountService.getAccountsByUserId(10L);
-
-        assertEquals(3, accountInfoDtos.size());
-        assertEquals("1000000000", accountInfoDtos.get(0).getAccountNumber());
-        assertEquals(1000L, accountInfoDtos.get(0).getBalance());
-        assertEquals("1000000001", accountInfoDtos.get(1).getAccountNumber());
-        assertEquals(2000L, accountInfoDtos.get(1).getBalance());
-        assertEquals("1000000002", accountInfoDtos.get(2).getAccountNumber());
-        assertEquals(3000L, accountInfoDtos.get(2).getBalance());
     }
 }

@@ -4,6 +4,7 @@ import com.example.account.domain.Account;
 import com.example.account.domain.AccountUser;
 import com.example.account.dto.account.AccountInfoDto;
 import com.example.account.dto.account.CreateAccountDto;
+import com.example.account.dto.account.DeleteAccountDto;
 import com.example.account.repository.AccountRepository;
 import com.example.account.repository.AccountUserRepository;
 import com.example.account.service.AccountService;
@@ -24,8 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -44,7 +44,7 @@ class AccountControllerTest {
 
 
     @Test
-    @DisplayName("CreateAccount - 정상")
+    @DisplayName("CreateAccount - 정상 로직")
     void CreateAccountTestSuccess() throws Exception {
         given(accountService.createAccount(any(CreateAccountDto.Request.class))).willReturn(
                 CreateAccountDto.Response.builder()
@@ -67,7 +67,30 @@ class AccountControllerTest {
     }
 
     @Test
-    @DisplayName("GetAccount - 정상")
+    @DisplayName("DeleteAccount - 정상 로직")
+    void DeleteAccountTestSuccess() throws Exception {
+        given(accountService.deleteAccount(any(DeleteAccountDto.Request.class))).willReturn(
+                DeleteAccountDto.Response.builder()
+                        .userId(1L)
+                        .accountNumber("1000000000")
+                        .unRegisteredAt(LocalDateTime.now())
+                        .build()
+        );
+
+        DeleteAccountDto.Request request = new DeleteAccountDto.Request();
+        request.setUserId(1L);
+        request.setAccountNumber("1000000000");
+
+        mockMvc.perform(delete("/account").contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(1L))
+                .andExpect(jsonPath("$.accountNumber").value("1000000000"))
+                .andDo(print());
+    }
+
+    @Test
+    @DisplayName("GetAccount - 정상 로직")
     void GetAccountTestSuccess() throws Exception {
         List<AccountInfoDto> accountInfoDtos = Arrays.asList(
                 AccountInfoDto.builder()

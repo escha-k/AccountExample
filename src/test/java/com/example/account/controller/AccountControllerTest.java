@@ -1,12 +1,8 @@
 package com.example.account.controller;
 
-import com.example.account.domain.Account;
-import com.example.account.domain.AccountUser;
 import com.example.account.dto.account.AccountInfoDto;
 import com.example.account.dto.account.CreateAccountDto;
 import com.example.account.dto.account.DeleteAccountDto;
-import com.example.account.repository.AccountRepository;
-import com.example.account.repository.AccountUserRepository;
 import com.example.account.service.AccountService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -21,7 +17,6 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
@@ -59,7 +54,7 @@ class AccountControllerTest {
         request.setInitBalance(1000L);
 
         mockMvc.perform(post("/account").contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(1L))
                 .andExpect(jsonPath("$.accountNumber").value("1000000000"))

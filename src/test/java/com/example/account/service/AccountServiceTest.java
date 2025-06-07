@@ -2,27 +2,20 @@ package com.example.account.service;
 
 import com.example.account.domain.Account;
 import com.example.account.domain.AccountUser;
-import com.example.account.dto.account.AccountInfoDto;
 import com.example.account.dto.account.CreateAccountDto;
-import com.example.account.dto.account.DeleteAccountDto;
 import com.example.account.repository.AccountRepository;
 import com.example.account.repository.AccountUserRepository;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AccountServiceTest {
@@ -32,7 +25,7 @@ class AccountServiceTest {
     @Mock
     AccountUserRepository accountUserRepository;
     @InjectMocks
-    AccountServiceImpl accountService;
+    AccountService accountService;
 
     @Test
     void createAccount() {
